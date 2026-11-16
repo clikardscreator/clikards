@@ -8,7 +8,23 @@
   );
 </script>
 
-{#if !pleinEcran}
-  <NavMenu />
-{/if}
-<Router {routes} />
+<div class="mise-en-page">
+  {#if !pleinEcran}
+    <NavMenu />
+  {/if}
+  <div class="contenu">
+    <Router {routes} />
+  </div>
+</div>
+
+<style>
+  .mise-en-page {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+  }
+  .contenu {
+    flex: 1;
+    min-width: 0;
+  }
+</style>

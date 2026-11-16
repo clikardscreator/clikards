@@ -13,9 +13,9 @@
   ];
 </script>
 
-<header class="entete">
-  <nav class="menu-principal" aria-label="Navigation principale">
-    <a class="marque" href="/" use:link>Clikards</a>
+<aside class="menu-lateral">
+  <a class="marque" href="/" use:link>Clikards</a>
+  <nav aria-label="Navigation principale">
     <ul>
       {#each liens as lien (lien.chemin)}
         <li>
@@ -24,41 +24,40 @@
       {/each}
     </ul>
   </nav>
-</header>
+</aside>
 
 <style>
-  .entete {
-    border-bottom: 1px solid #e5e5e5;
-  }
-  .menu-principal {
+  .menu-lateral {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    max-width: 64rem;
-    margin: 0 auto;
-    padding: 0.75rem 1.5rem;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 14rem;
+    flex-shrink: 0;
+    min-height: 100vh;
+    padding: 1.25rem 1rem;
+    border-right: 1px solid #e5e5e5;
     font-family: system-ui, sans-serif;
+    box-sizing: border-box;
   }
   .marque {
     font-weight: 700;
     font-size: 1.1rem;
     color: #1d4ed8;
     text-decoration: none;
-    margin-right: auto;
   }
   ul {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 0.25rem;
     list-style: none;
     margin: 0;
     padding: 0;
   }
   a {
+    display: block;
     color: #333;
     text-decoration: none;
-    padding: 0.4rem 0.6rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 0.4rem;
     font-size: 0.95rem;
   }
