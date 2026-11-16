@@ -20,15 +20,15 @@
     margin-bottom: 0.5rem;
   }
   .description {
-    color: #444;
+    color: var(--text);
   }
   .jalon {
     display: inline-block;
     margin-top: 1.5rem;
     padding: 0.4rem 0.9rem;
     border-radius: 999px;
-    background-color: #eef2ff;
-    color: #1d4ed8;
+    background-color: var(--accent-bg);
+    color: var(--accent);
     font-size: 0.85rem;
   }
 </style>

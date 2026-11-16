@@ -22,7 +22,7 @@
     font-family: system-ui, sans-serif;
   }
   .sous-titre {
-    color: #555;
+    color: var(--text);
   }
   .choix {
     display: flex;
@@ -34,17 +34,17 @@
     padding: 0.75rem 1.5rem;
     font-size: 1.1rem;
     border-radius: 0.5rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     cursor: pointer;
-    color: inherit;
+    color: var(--text-h);
     text-decoration: none;
-    background-color: #f8f8f8;
+    background-color: #f8fafc;
   }
   .bouton:hover {
-    background-color: #eee;
+    background-color: var(--accent-bg);
   }
   .horloge {
-    color: #888;
+    color: var(--text-muted);
     font-size: 0.9rem;
   }
 </style>

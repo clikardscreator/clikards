@@ -35,14 +35,14 @@
     flex-shrink: 0;
     min-height: 100vh;
     padding: 1.25rem 1rem;
-    border-right: 1px solid #e5e5e5;
+    border-right: 1px solid var(--border);
     font-family: system-ui, sans-serif;
     box-sizing: border-box;
   }
   .marque {
     font-weight: 700;
     font-size: 1.1rem;
-    color: #1d4ed8;
+    color: var(--accent);
     text-decoration: none;
   }
   ul {
@@ -55,18 +55,18 @@
   }
   a {
     display: block;
-    color: #333;
+    color: var(--text);
     text-decoration: none;
     padding: 0.5rem 0.75rem;
     border-radius: 0.4rem;
     font-size: 0.95rem;
   }
   a:hover {
-    background-color: #f3f4f6;
+    background-color: var(--accent-bg);
   }
   a:global(.active) {
-    background-color: #eef2ff;
-    color: #1d4ed8;
+    background-color: var(--accent-bg);
+    color: var(--accent);
     font-weight: 600;
   }
 </style>
