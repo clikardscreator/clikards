@@ -3,7 +3,7 @@
 </script>
 
 <PageProvisoire
-  titre="Banques de questions"
+  titre="Bibliothèque de questions"
   description="Création et édition des questions, import/export JSON et CSV, duplication et réordonnancement des banques."
   jalon="Jalon 2 — classes et questions"
 />

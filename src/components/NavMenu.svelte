@@ -4,7 +4,7 @@
 
   const liens: { chemin: string; libelle: string }[] = [
     { chemin: '/classes', libelle: 'Classes' },
-    { chemin: '/banques', libelle: 'Banques' },
+    { chemin: '/banques', libelle: 'Bibliothèque' },
     { chemin: '/sons', libelle: 'Médiathèque' },
     { chemin: '/resultats', libelle: 'Résultats' },
     { chemin: '/cartes', libelle: 'Cartes' },
