@@ -42,6 +42,9 @@ describe('listerFichiersDossier', () => {
   });
 
   it('refuse sans clé API configurée, avec un message explicite', async () => {
+    // Forcé à vide explicitement : un vrai .env.local avec une clé peut exister
+    // en développement local, le test ne doit pas en dépendre implicitement.
+    vi.stubEnv('VITE_GOOGLE_API_KEY', '');
     await expect(listerFichiersDossier('abc', 'audio')).rejects.toThrow('VITE_GOOGLE_API_KEY');
   });
 
@@ -82,12 +85,15 @@ describe('listerFichiersDossier', () => {
     await expect(listerFichiersDossier('abc', 'audio')).rejects.toThrow('docs/GOOGLE_SETUP.md');
   });
 
-  it('transforme la réponse Drive en fichiers exploitables', async () => {
+  it('transforme la réponse Drive en fichiers exploitables, en filtrant le mimeType côté client', async () => {
     vi.stubEnv('VITE_GOOGLE_API_KEY', 'cle-test');
     const fetchSimule = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        files: [{ id: 'f1', name: 'Entrée des cuivres.mp3', mimeType: 'audio/mpeg' }],
+        files: [
+          { id: 'f1', name: 'Entrée des cuivres.mp3', mimeType: 'audio/mpeg' },
+          { id: 'img1', name: 'Photo.jpg', mimeType: 'image/jpeg' },
+        ],
       }),
     });
     vi.stubGlobal('fetch', fetchSimule);
@@ -95,11 +101,67 @@ describe('listerFichiersDossier', () => {
     const fichiers = await listerFichiersDossier('abc', 'audio');
 
     expect(fichiers).toEqual([
-      { id: 'f1', nom: 'Entrée des cuivres.mp3', mimeType: 'audio/mpeg', modifiedTime: undefined },
+      {
+        id: 'f1',
+        nom: 'Entrée des cuivres.mp3',
+        mimeType: 'audio/mpeg',
+        modifiedTime: undefined,
+        dossier: undefined,
+      },
     ]);
     const [urlAppelee] = fetchSimule.mock.calls[0] as [string];
-    expect(urlAppelee).toContain('audio%2F');
+    expect(urlAppelee).toContain('%27abc%27+in+parents');
     expect(urlAppelee).toContain('key=cle-test');
+  });
+
+  it('parcourt les sous-dossiers récursivement et tague chaque fichier avec son chemin', async () => {
+    vi.stubEnv('VITE_GOOGLE_API_KEY', 'cle-test');
+
+    // Arborescence simulée :
+    // racine/ (Theme-racine.mp3, BAROQUE/)
+    //   BAROQUE/ (Theme-baroque.mp3, Instruments/)
+    //     Instruments/ (Theme-instruments.mp3)
+    const reponsesParDossier: Record<string, unknown> = {
+      racine: {
+        files: [
+          { id: 'f-racine', name: 'Theme-racine.mp3', mimeType: 'audio/mpeg' },
+          { id: 'd-baroque', name: 'BAROQUE', mimeType: 'application/vnd.google-apps.folder' },
+        ],
+      },
+      'd-baroque': {
+        files: [
+          { id: 'f-baroque', name: 'Theme-baroque.mp3', mimeType: 'audio/mpeg' },
+          {
+            id: 'd-instruments',
+            name: 'Instruments',
+            mimeType: 'application/vnd.google-apps.folder',
+          },
+        ],
+      },
+      'd-instruments': {
+        files: [{ id: 'f-instruments', name: 'Theme-instruments.mp3', mimeType: 'audio/mpeg' }],
+      },
+    };
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        const requete = new URL(url).searchParams.get('q') ?? '';
+        const idInterroge = /'([^']*)'/.exec(requete)?.[1] ?? 'racine';
+        return Promise.resolve({
+          ok: true,
+          json: async () => reponsesParDossier[idInterroge] ?? { files: [] },
+        });
+      }),
+    );
+
+    const fichiers = await listerFichiersDossier('racine', 'audio');
+
+    expect(fichiers.map((f) => [f.nom, f.dossier])).toEqual([
+      ['Theme-racine.mp3', undefined],
+      ['Theme-baroque.mp3', 'BAROQUE'],
+      ['Theme-instruments.mp3', 'BAROQUE/Instruments'],
+    ]);
   });
 });
 

@@ -174,8 +174,15 @@
     modeAjoutImage = null;
   }
 
-  function ajouterImageDrive(fichier: { nom: string; mime: string; blob: Blob; idDrive: string }) {
-    images = [...images, { blob: fichier.blob, attribution: fichier.nom }];
+  function ajouterImageDrive(fichier: {
+    nom: string;
+    mime: string;
+    blob: Blob;
+    idDrive: string;
+    dossier?: string;
+  }) {
+    const attribution = fichier.dossier ? `${fichier.dossier}/${fichier.nom}` : fichier.nom;
+    images = [...images, { blob: fichier.blob, attribution }];
   }
 
   function retirerImage(index: number) {
@@ -225,8 +232,9 @@
     mime: string;
     blob: Blob;
     idDrive: string;
+    dossier?: string;
   }) {
-    const son = await importerSonDepuisDrive(fichier);
+    const son = await importerSonDepuisDrive({ ...fichier, dossierDrive: fichier.dossier });
     sonsDisponibles = await listerSons();
     audios = [...audios, { sonId: son.id, lectureAuto: false }];
     ajoutAudioOuvert = false;

@@ -44,8 +44,9 @@
     mime: string;
     blob: Blob;
     idDrive: string;
+    dossier?: string;
   }) {
-    await importerSonDepuisDrive(fichier);
+    await importerSonDepuisDrive({ ...fichier, dossierDrive: fichier.dossier });
     await recharger();
   }
 

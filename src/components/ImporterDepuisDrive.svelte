@@ -12,7 +12,13 @@
     onimporter,
   }: {
     typeMime: 'audio' | 'image';
-    onimporter: (fichier: { nom: string; mime: string; blob: Blob; idDrive: string }) => void;
+    onimporter: (fichier: {
+      nom: string;
+      mime: string;
+      blob: Blob;
+      idDrive: string;
+      dossier?: string;
+    }) => void;
   } = $props();
 
   const cleApiConfiguree = Boolean(import.meta.env.VITE_GOOGLE_API_KEY);
@@ -51,7 +57,13 @@
     idsEnCours.add(fichier.id);
     try {
       const blob = await telechargerFichierDrive(fichier.id);
-      onimporter({ nom: fichier.nom, mime: fichier.mimeType, blob, idDrive: fichier.id });
+      onimporter({
+        nom: fichier.nom,
+        mime: fichier.mimeType,
+        blob,
+        idDrive: fichier.id,
+        dossier: fichier.dossier,
+      });
       idsImportes.add(fichier.id);
     } catch (e) {
       erreur = `Échec du téléchargement de « ${fichier.nom} » : ${e instanceof Error ? e.message : 'erreur inconnue.'}`;
@@ -88,7 +100,10 @@
       <ul class="liste-fichiers">
         {#each fichiers as fichier (fichier.id)}
           <li>
-            <span class="nom-fichier">{fichier.nom}</span>
+            <span class="nom-fichier">
+              {#if fichier.dossier}<span class="dossier-fichier">{fichier.dossier}/</span
+                >{/if}{fichier.nom}
+            </span>
             {#if idsImportes.has(fichier.id)}
               <span class="statut-importe">Importé</span>
             {:else}
@@ -171,6 +186,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .dossier-fichier {
+    color: var(--text-muted);
   }
   .liste-fichiers button {
     padding: 0.3rem 0.65rem;

@@ -3,11 +3,16 @@ export interface FichierDrive {
   nom: string;
   mimeType: string;
   modifiedTime?: string;
+  /** Chemin du sous-dossier d'origine (ex. « BAROQUE/Instruments »), absent à la racine. */
+  dossier?: string;
 }
 
 const URL_BASE = 'https://www.googleapis.com/drive/v3/files';
 const MOTIF_DOSSIER = /\/folders\/([a-zA-Z0-9_-]{10,})/;
 const MOTIF_ID_SEUL = /^[a-zA-Z0-9_-]{10,}$/;
+const MIME_DOSSIER = 'application/vnd.google-apps.folder';
+/** Sous-dossiers parcourus récursivement sur 3 niveaux (CLAUDE.md section 7, mode A). */
+const PROFONDEUR_MAX = 3;
 
 /**
  * Extrait l'identifiant d'un dossier à partir d'un lien de partage Google Drive
@@ -67,17 +72,19 @@ async function erreurDepuisReponse(reponse: Response, contexte: string): Promise
   return new Error(`${contexte} (code ${reponse.status}).`);
 }
 
-/** Liste les fichiers audio ou image d'un dossier Drive partagé « avec le lien ». */
-export async function listerFichiersDossier(
-  idDossier: string,
-  typeMime: 'audio' | 'image',
-): Promise<FichierDrive[]> {
-  const cleApi = cleApiRequise();
+interface EnfantDrive {
+  id: string;
+  name: string;
+  mimeType: string;
+  modifiedTime?: string;
+}
 
+/** Liste tous les enfants directs (fichiers et sous-dossiers) d'un dossier Drive. */
+async function listerEnfantsDirects(idDossier: string, cleApi: string): Promise<EnfantDrive[]> {
   const parametres = new URLSearchParams({
-    q: `'${idDossier}' in parents and mimeType contains '${typeMime}/' and trashed = false`,
+    q: `'${idDossier}' in parents and trashed = false`,
     fields: 'files(id,name,mimeType,modifiedTime)',
-    pageSize: '100',
+    pageSize: '200',
     key: cleApi,
   });
 
@@ -86,15 +93,57 @@ export async function listerFichiersDossier(
     throw await erreurDepuisReponse(reponse, 'Impossible de lire ce dossier Google Drive');
   }
 
-  const donnees = (await reponse.json()) as {
-    files: Array<{ id: string; name: string; mimeType: string; modifiedTime?: string }>;
-  };
-  return donnees.files.map((fichier) => ({
-    id: fichier.id,
-    nom: fichier.name,
-    mimeType: fichier.mimeType,
-    modifiedTime: fichier.modifiedTime,
-  }));
+  const donnees = (await reponse.json()) as { files: EnfantDrive[] };
+  return donnees.files;
+}
+
+async function listerRecursif(
+  idDossier: string,
+  typeMime: 'audio' | 'image',
+  cleApi: string,
+  profondeurRestante: number,
+  cheminDossier: string,
+): Promise<FichierDrive[]> {
+  const enfants = await listerEnfantsDirects(idDossier, cleApi);
+
+  const fichiers: FichierDrive[] = enfants
+    .filter((enfant) => enfant.mimeType.startsWith(`${typeMime}/`))
+    .map((enfant) => ({
+      id: enfant.id,
+      nom: enfant.name,
+      mimeType: enfant.mimeType,
+      modifiedTime: enfant.modifiedTime,
+      dossier: cheminDossier || undefined,
+    }));
+
+  if (profondeurRestante > 0) {
+    const sousDossiers = enfants.filter((enfant) => enfant.mimeType === MIME_DOSSIER);
+    for (const sousDossier of sousDossiers) {
+      const chemin = cheminDossier ? `${cheminDossier}/${sousDossier.name}` : sousDossier.name;
+      const fichiersImbriques = await listerRecursif(
+        sousDossier.id,
+        typeMime,
+        cleApi,
+        profondeurRestante - 1,
+        chemin,
+      );
+      fichiers.push(...fichiersImbriques);
+    }
+  }
+
+  return fichiers;
+}
+
+/**
+ * Liste les fichiers audio ou image d'un dossier Drive partagé « avec le lien »,
+ * en parcourant aussi ses sous-dossiers (3 niveaux, chacun devient un tag).
+ */
+export async function listerFichiersDossier(
+  idDossier: string,
+  typeMime: 'audio' | 'image',
+): Promise<FichierDrive[]> {
+  const cleApi = cleApiRequise();
+  return listerRecursif(idDossier, typeMime, cleApi, PROFONDEUR_MAX, '');
 }
 
 export async function telechargerFichierDrive(idFichier: string): Promise<Blob> {

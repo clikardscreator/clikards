@@ -46,7 +46,8 @@ export async function importerSonDepuisDrive(fichier: {
     blob: fichier.blob,
     sourceDriveId: fichier.idDrive,
     dossierDrive: fichier.dossierDrive,
-    tags: [],
+    // Chaque sous-dossier Drive traversé devient un tag (CLAUDE.md section 7).
+    tags: fichier.dossierDrive ? fichier.dossierDrive.split('/') : [],
     importeLe: Date.now(),
   };
   await db.sons.add(son);

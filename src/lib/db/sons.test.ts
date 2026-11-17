@@ -50,6 +50,29 @@ describe('importerSonDepuisDrive', () => {
     expect(son.sourceDriveId).toBe('fichier-123');
     expect(son.dossierDrive).toBe('dossier-abc');
   });
+
+  it('transforme chaque niveau de sous-dossier en tag', async () => {
+    const son = await importerSonDepuisDrive({
+      nom: 'Theme.mp3',
+      mime: 'audio/mpeg',
+      blob: new Blob(['xy'], { type: 'audio/mpeg' }),
+      idDrive: 'fichier-123',
+      dossierDrive: 'BAROQUE/Instruments',
+    });
+
+    expect(son.tags).toEqual(['BAROQUE', 'Instruments']);
+  });
+
+  it('laisse les tags vides sans sous-dossier', async () => {
+    const son = await importerSonDepuisDrive({
+      nom: 'Theme.mp3',
+      mime: 'audio/mpeg',
+      blob: new Blob(['xy'], { type: 'audio/mpeg' }),
+      idDrive: 'fichier-123',
+    });
+
+    expect(son.tags).toEqual([]);
+  });
 });
 
 describe('listerSons', () => {
