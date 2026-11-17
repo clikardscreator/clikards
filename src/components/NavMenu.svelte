@@ -9,7 +9,6 @@
     { chemin: '/resultats', libelle: 'Résultats' },
     { chemin: '/cartes', libelle: 'Cartes' },
     { chemin: '/reglages', libelle: 'Réglages' },
-    { chemin: '/compte', libelle: 'Compte' },
   ];
 </script>
 
