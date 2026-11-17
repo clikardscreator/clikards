@@ -1,0 +1,80 @@
+{
+  "formatVersion": 1,
+  "exporteLe": "2026-11-17T00:00:00.000Z",
+  "banque": {
+    "titre": "Timbres — 6e (exemple)",
+    "niveau": "6e",
+    "tags": ["timbre", "familles d'instruments", "démonstration"]
+  },
+  "questions": [
+    {
+      "ordre": 0,
+      "enonce": "À quelle famille appartient le violon ?",
+      "type": "qcm",
+      "choix": [
+        { "lettre": "A", "texte": "Cordes" },
+        { "lettre": "B", "texte": "Vents (bois)" },
+        { "lettre": "C", "texte": "Vents (cuivres)" },
+        { "lettre": "D", "texte": "Percussions" }
+      ],
+      "bonneReponse": "A",
+      "competence": "Reconnaître les familles d'instruments",
+      "coefficient": 1,
+      "notee": true
+    },
+    {
+      "ordre": 1,
+      "enonce": "À quelle famille appartient la trompette ?",
+      "type": "qcm",
+      "choix": [
+        { "lettre": "A", "texte": "Cordes" },
+        { "lettre": "B", "texte": "Vents (bois)" },
+        { "lettre": "C", "texte": "Vents (cuivres)" },
+        { "lettre": "D", "texte": "Percussions" }
+      ],
+      "bonneReponse": "C",
+      "competence": "Reconnaître les familles d'instruments",
+      "coefficient": 1,
+      "notee": true
+    },
+    {
+      "ordre": 2,
+      "enonce": "Le piano est-il un instrument à cordes frappées ?",
+      "type": "vraifaux",
+      "choix": [
+        { "lettre": "A", "texte": "Vrai" },
+        { "lettre": "B", "texte": "Faux" }
+      ],
+      "bonneReponse": "A",
+      "competence": "Mécanismes de production du son",
+      "coefficient": 1,
+      "notee": true
+    },
+    {
+      "ordre": 3,
+      "enonce": "La clarinette utilise une anche simple pour produire le son.",
+      "type": "vraifaux",
+      "choix": [
+        { "lettre": "A", "texte": "Vrai" },
+        { "lettre": "B", "texte": "Faux" }
+      ],
+      "bonneReponse": "A",
+      "competence": "Mécanismes de production du son",
+      "coefficient": 1,
+      "notee": true
+    },
+    {
+      "ordre": 4,
+      "enonce": "Quel est votre instrument préféré parmi ceux étudiés aujourd'hui ?",
+      "type": "sondage",
+      "choix": [
+        { "lettre": "A", "texte": "Violon" },
+        { "lettre": "B", "texte": "Trompette" },
+        { "lettre": "C", "texte": "Piano" },
+        { "lettre": "D", "texte": "Clarinette" }
+      ],
+      "coefficient": 1,
+      "notee": false
+    }
+  ]
+}

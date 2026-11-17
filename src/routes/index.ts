@@ -4,6 +4,7 @@ import Compte from './Compte.svelte';
 import Classes from './Classes.svelte';
 import ClasseDetail from './ClasseDetail.svelte';
 import Banques from './Banques.svelte';
+import BanqueDetail from './BanqueDetail.svelte';
 import Sons from './Sons.svelte';
 import Projection from './Projection.svelte';
 import Scanner from './Scanner.svelte';
@@ -18,6 +19,7 @@ export const routes: RouteDefinition = {
   '/classes': Classes,
   '/classes/:id': ClasseDetail,
   '/banques': Banques,
+  '/banques/:id': BanqueDetail,
   '/sons': Sons,
   '/session/:id': Projection,
   '/scan': Scanner,

@@ -29,10 +29,53 @@ export interface LigneReglage {
   valeur: unknown;
 }
 
+export type TypeQuestion = 'qcm' | 'vraifaux' | 'sondage';
+export type Lettre = 'A' | 'B' | 'C' | 'D';
+
+export interface Choix {
+  lettre: Lettre;
+  texte: string;
+}
+
+export interface ImageQuestion {
+  url: string;
+  attribution: string;
+}
+
+export interface Banque {
+  id: string;
+  titre: string;
+  niveau?: Niveau;
+  tags: string[];
+  auteur?: string;
+  version: number;
+  creeLe: number;
+  modifieLe: number;
+}
+
+export interface Question {
+  id: string;
+  banqueId: string;
+  ordre: number;
+  enonce: string;
+  type: TypeQuestion;
+  choix: Choix[];
+  /** Absente pour un sondage. */
+  bonneReponse?: Lettre;
+  competence?: string;
+  image?: ImageQuestion;
+  /** 1 par défaut. */
+  coefficient: number;
+  /** false pour un sondage ou une question d'échauffement. */
+  notee: boolean;
+}
+
 class ClikardsDatabase extends Dexie {
   classes!: Table<Classe, string>;
   eleves!: Table<Eleve, string>;
   reglages!: Table<LigneReglage, string>;
+  banques!: Table<Banque, string>;
+  questions!: Table<Question, string>;
 
   constructor() {
     super('clikards');
@@ -44,6 +87,10 @@ class ClikardsDatabase extends Dexie {
     // schéma des tables non mentionnées (classes, eleves) entre les versions.
     this.version(2).stores({
       reglages: 'cle',
+    });
+    this.version(3).stores({
+      banques: 'id, titre, niveau',
+      questions: 'id, banqueId, [banqueId+ordre]',
     });
   }
 }
