@@ -37,9 +37,23 @@ export interface Choix {
   texte: string;
 }
 
+/**
+ * Image d'un diaporama de question. `url` pour une image distante (recherche
+ * Openverse ou fichier Drive resté en ligne) ; `blob` pour une image importée
+ * depuis le disque ou mise en cache depuis Drive (voir docs/DECISIONS.md :
+ * les images `blob` ne sont pas incluses dans l'export JSON d'une banque).
+ */
 export interface ImageQuestion {
-  url: string;
-  attribution: string;
+  url?: string;
+  blob?: Blob;
+  attribution?: string;
+}
+
+export interface AudioQuestion {
+  sonId: string;
+  debut?: number;
+  fin?: number;
+  lectureAuto: boolean;
 }
 
 export interface Banque {
@@ -63,11 +77,26 @@ export interface Question {
   /** Absente pour un sondage. */
   bonneReponse?: Lettre;
   competence?: string;
-  image?: ImageQuestion;
+  /** Diaporama : zéro, une ou plusieurs images affichées avec la question. */
+  images?: ImageQuestion[];
+  audio?: AudioQuestion;
   /** 1 par défaut. */
   coefficient: number;
   /** false pour un sondage ou une question d'échauffement. */
   notee: boolean;
+}
+
+/** Fichier son importé localement ou mis en cache depuis Google Drive (section 5 et 7). */
+export interface Son {
+  id: string;
+  titre: string;
+  nomFichier: string;
+  mime: string;
+  blob: Blob;
+  sourceDriveId?: string;
+  dossierDrive?: string;
+  tags: string[];
+  importeLe: number;
 }
 
 class ClikardsDatabase extends Dexie {
@@ -76,6 +105,7 @@ class ClikardsDatabase extends Dexie {
   reglages!: Table<LigneReglage, string>;
   banques!: Table<Banque, string>;
   questions!: Table<Question, string>;
+  sons!: Table<Son, string>;
 
   constructor() {
     super('clikards');
@@ -91,6 +121,9 @@ class ClikardsDatabase extends Dexie {
     this.version(3).stores({
       banques: 'id, titre, niveau',
       questions: 'id, banqueId, [banqueId+ordre]',
+    });
+    this.version(4).stores({
+      sons: 'id, titre, sourceDriveId',
     });
   }
 }

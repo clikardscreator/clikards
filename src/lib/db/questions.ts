@@ -1,5 +1,6 @@
 import {
   db,
+  type AudioQuestion,
   type Choix,
   type ImageQuestion,
   type Lettre,
@@ -19,7 +20,8 @@ export interface DonneesQuestion {
   choix: Choix[];
   bonneReponse?: Lettre;
   competence?: string;
-  image?: ImageQuestion;
+  images?: ImageQuestion[];
+  audio?: AudioQuestion;
   coefficient?: number;
   notee?: boolean;
 }
@@ -33,7 +35,8 @@ function normaliser(donnees: DonneesQuestion): Omit<Question, 'id' | 'banqueId' 
     choix: donnees.choix,
     bonneReponse: estSondage ? undefined : donnees.bonneReponse,
     competence: donnees.competence?.trim() || undefined,
-    image: donnees.image,
+    images: donnees.images && donnees.images.length > 0 ? donnees.images : undefined,
+    audio: donnees.audio,
     coefficient: donnees.coefficient ?? 1,
     notee: estSondage ? false : (donnees.notee ?? true),
   };

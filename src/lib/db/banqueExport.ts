@@ -11,6 +11,21 @@ export interface ExportBanque {
   questions: Array<Omit<Question, 'id' | 'banqueId'>>;
 }
 
+/**
+ * Les images importées localement ou depuis Drive (`blob`) et le son associé
+ * (`audio`, référence locale à la médiathèque) ne sont pas portables dans un
+ * fichier JSON texte : ils sont retirés de l'export. Seules les images
+ * distantes (`url`, ex. Openverse) survivent. Voir docs/DECISIONS.md.
+ */
+function questionExportable(question: Question): Omit<Question, 'id' | 'banqueId'> {
+  const { id: _id, banqueId: _idBanque, images, audio: _audio, ...reste } = question;
+  const imagesExportables = images?.filter((image) => Boolean(image.url));
+  return {
+    ...reste,
+    images: imagesExportables && imagesExportables.length > 0 ? imagesExportables : undefined,
+  };
+}
+
 export async function exporterBanque(banqueId: string): Promise<ExportBanque> {
   const banque = await db.banques.get(banqueId);
   if (!banque) {
@@ -28,7 +43,7 @@ export async function exporterBanque(banqueId: string): Promise<ExportBanque> {
       tags: banque.tags,
       auteur: banque.auteur,
     },
-    questions: questions.map(({ id: _id, banqueId: _idBanque, ...reste }) => reste),
+    questions: questions.map(questionExportable),
   };
 }
 

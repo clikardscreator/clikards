@@ -18,17 +18,22 @@
     nomFichierBanque,
   } from '../lib/db/banqueExport';
   import { questionsVersCsv, csvVersQuestions, nomFichierCsv } from '../lib/db/banqueCsv';
+  import { importerSonDepuisDrive, importerSonLocal, listerSons } from '../lib/db/sons';
   import {
     NIVEAUX,
+    type AudioQuestion,
     type Banque,
     type Choix,
     type ImageQuestion,
     type Lettre,
     type Niveau,
     type Question,
+    type Son,
     type TypeQuestion,
   } from '../lib/db/database';
   import RechercheImages from '../components/RechercheImages.svelte';
+  import ImageApercu from '../components/ImageApercu.svelte';
+  import ImporterDepuisDrive from '../components/ImporterDepuisDrive.svelte';
   import type { ImageTrouvee } from '../lib/images/openverse';
   import { texteAttribution } from '../lib/images/openverse';
 
@@ -36,6 +41,7 @@
 
   let banque = $state<Banque | null | undefined>(undefined);
   let questions = $state<Question[]>([]);
+  let sonsDisponibles = $state<Son[]>([]);
   let chargement = $state(true);
 
   let formulaireOuvert = $state(false);
@@ -47,9 +53,17 @@
   let competence = $state('');
   let coefficient = $state(1);
   let notee = $state(true);
-  let image = $state<ImageQuestion | undefined>(undefined);
-  let selecteurImageOuvert = $state(false);
   let erreurFormulaire = $state('');
+
+  let images = $state<ImageQuestion[]>([]);
+  let modeAjoutImage = $state<'recherche' | 'drive' | null>(null);
+
+  let sonIdChoisi = $state('');
+  let audioDebut = $state<number | undefined>(undefined);
+  let audioFin = $state<number | undefined>(undefined);
+  let audioLectureAuto = $state(false);
+  let importAudioOuvert = $state(false);
+  let driveAudioOuvert = $state(false);
 
   let entreeImportJson: HTMLInputElement | undefined = $state();
   let entreeImportCsv: HTMLInputElement | undefined = $state();
@@ -67,12 +81,14 @@
 
   async function recharger() {
     chargement = true;
-    const [banqueChargee, questionsChargees] = await Promise.all([
+    const [banqueChargee, questionsChargees, sonsCharges] = await Promise.all([
       obtenirBanque(params.id),
       listerQuestionsParBanque(params.id),
+      listerSons(),
     ]);
     banque = banqueChargee ?? null;
     questions = questionsChargees;
+    sonsDisponibles = sonsCharges;
     chargement = false;
   }
 
@@ -87,9 +103,15 @@
     competence = '';
     coefficient = 1;
     notee = true;
-    image = undefined;
-    selecteurImageOuvert = false;
     erreurFormulaire = '';
+    images = [];
+    modeAjoutImage = null;
+    sonIdChoisi = '';
+    audioDebut = undefined;
+    audioFin = undefined;
+    audioLectureAuto = false;
+    importAudioOuvert = false;
+    driveAudioOuvert = false;
   }
 
   function ouvrirCreation() {
@@ -110,9 +132,15 @@
     competence = question.competence ?? '';
     coefficient = question.coefficient;
     notee = question.notee;
-    image = question.image;
-    selecteurImageOuvert = false;
     erreurFormulaire = '';
+    images = question.images ? [...question.images] : [];
+    modeAjoutImage = null;
+    sonIdChoisi = question.audio?.sonId ?? '';
+    audioDebut = question.audio?.debut;
+    audioFin = question.audio?.fin;
+    audioLectureAuto = question.audio?.lectureAuto ?? false;
+    importAudioOuvert = false;
+    driveAudioOuvert = false;
     formulaireOuvert = true;
   }
 
@@ -131,9 +159,60 @@
     }
   }
 
-  function choisirImage(trouvee: ImageTrouvee) {
-    image = { url: trouvee.url, attribution: texteAttribution(trouvee) };
-    selecteurImageOuvert = false;
+  function ajouterImageRecherche(trouvee: ImageTrouvee) {
+    images = [...images, { url: trouvee.url, attribution: texteAttribution(trouvee) }];
+    modeAjoutImage = null;
+  }
+
+  function ajouterImagesLocales(evenement: Event) {
+    const fichiers = (evenement.currentTarget as HTMLInputElement).files;
+    if (!fichiers) return;
+    const nouvelles: ImageQuestion[] = Array.from(fichiers).map((fichier) => ({
+      blob: fichier,
+      attribution: fichier.name,
+    }));
+    images = [...images, ...nouvelles];
+    (evenement.currentTarget as HTMLInputElement).value = '';
+    modeAjoutImage = null;
+  }
+
+  function ajouterImageDrive(fichier: { nom: string; mime: string; blob: Blob; idDrive: string }) {
+    images = [...images, { blob: fichier.blob, attribution: fichier.nom }];
+  }
+
+  function retirerImage(index: number) {
+    images = images.filter((_, i) => i !== index);
+  }
+
+  function deplacerImage(index: number, direction: 'gauche' | 'droite') {
+    const cible = direction === 'gauche' ? index - 1 : index + 1;
+    if (cible < 0 || cible >= images.length) return;
+    const copie = [...images];
+    [copie[index], copie[cible]] = [copie[cible], copie[index]];
+    images = copie;
+  }
+
+  async function importerAudioLocalPourQuestion(evenement: Event) {
+    const fichier = (evenement.currentTarget as HTMLInputElement).files?.[0];
+    if (!fichier) return;
+    const son = await importerSonLocal(fichier);
+    sonsDisponibles = await listerSons();
+    sonIdChoisi = son.id;
+    importAudioOuvert = false;
+    (evenement.currentTarget as HTMLInputElement).value = '';
+  }
+
+  async function importerAudioDrivePourQuestion(fichier: {
+    nom: string;
+    mime: string;
+    blob: Blob;
+    idDrive: string;
+  }) {
+    const son = await importerSonDepuisDrive(fichier);
+    sonsDisponibles = await listerSons();
+    sonIdChoisi = son.id;
+    importAudioOuvert = false;
+    driveAudioOuvert = false;
   }
 
   async function validerFormulaire(evenement: SubmitEvent) {
@@ -157,13 +236,26 @@
       return;
     }
 
+    const audio: AudioQuestion | undefined = sonIdChoisi
+      ? {
+          sonId: sonIdChoisi,
+          debut: audioDebut || undefined,
+          fin: audioFin || undefined,
+          lectureAuto: audioLectureAuto,
+        }
+      : undefined;
+
     const donnees: DonneesQuestion = {
       enonce,
       type,
       choix,
       bonneReponse: bonneReponse || undefined,
       competence,
-      image,
+      // $state.snapshot : les tableaux/objets $state de Svelte 5 sont des
+      // proxys réactifs que le clonage structuré d'IndexedDB ne sait pas
+      // sérialiser tels quels (DataCloneError à l'écriture Dexie).
+      images: $state.snapshot(images),
+      audio,
       coefficient,
       notee,
     };
@@ -443,21 +535,113 @@
           </label>
         </div>
 
-        <div class="bloc-image">
-          {#if image}
-            <div class="image-choisie">
-              <img src={image.url} alt="" />
-              <div>
-                <p class="attribution">{image.attribution}</p>
-                <button type="button" onclick={() => (image = undefined)}>Retirer l'image</button>
-              </div>
-            </div>
-          {:else if selecteurImageOuvert}
-            <RechercheImages onchoisir={choisirImage} />
+        <div class="bloc-images">
+          <p class="etiquette">Images (diaporama)</p>
+
+          {#if images.length > 0}
+            <ul class="diaporama">
+              {#each images as img, index (index)}
+                <li>
+                  <ImageApercu image={img} alt="" class="vignette" />
+                  <p class="attribution" title={img.attribution}>{img.attribution}</p>
+                  <div class="actions-vignette">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onclick={() => deplacerImage(index, 'gauche')}
+                      aria-label="Déplacer vers la gauche"
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === images.length - 1}
+                      onclick={() => deplacerImage(index, 'droite')}
+                      aria-label="Déplacer vers la droite"
+                    >
+                      ▶
+                    </button>
+                    <button type="button" onclick={() => retirerImage(index)}>Retirer</button>
+                  </div>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+
+          {#if modeAjoutImage === 'recherche'}
+            <RechercheImages onchoisir={ajouterImageRecherche} />
+            <button type="button" onclick={() => (modeAjoutImage = null)}>Fermer</button>
+          {:else if modeAjoutImage === 'drive'}
+            <ImporterDepuisDrive typeMime="image" onimporter={ajouterImageDrive} />
+            <button type="button" onclick={() => (modeAjoutImage = null)}>Fermer</button>
           {:else}
-            <button type="button" onclick={() => (selecteurImageOuvert = true)}>
-              Ajouter une image
+            <div class="choix-ajout">
+              <button type="button" onclick={() => (modeAjoutImage = 'recherche')}>
+                Rechercher (Openverse)
+              </button>
+              <label class="bouton-fichier-mini">
+                Depuis mon ordinateur
+                <input type="file" accept="image/*" multiple onchange={ajouterImagesLocales} />
+              </label>
+              <button type="button" onclick={() => (modeAjoutImage = 'drive')}>
+                Depuis Google Drive
+              </button>
+            </div>
+          {/if}
+        </div>
+
+        <div class="bloc-audio">
+          <p class="etiquette">Son associé (extrait audio)</p>
+
+          {#if sonsDisponibles.length > 0}
+            <label>
+              Son
+              <select bind:value={sonIdChoisi}>
+                <option value="">— Aucun —</option>
+                {#each sonsDisponibles as son (son.id)}
+                  <option value={son.id}>{son.titre}</option>
+                {/each}
+              </select>
+            </label>
+          {:else}
+            <p class="aide">Aucun son dans la médiathèque pour l'instant.</p>
+          {/if}
+
+          {#if sonIdChoisi}
+            <div class="ligne-champs">
+              <label>
+                Début (s)
+                <input type="number" min="0" step="0.1" bind:value={audioDebut} />
+              </label>
+              <label>
+                Fin (s)
+                <input type="number" min="0" step="0.1" bind:value={audioFin} />
+              </label>
+              <label class="case-notee">
+                <input type="checkbox" bind:checked={audioLectureAuto} />
+                Lecture automatique
+              </label>
+            </div>
+          {/if}
+
+          {#if !importAudioOuvert}
+            <button type="button" onclick={() => (importAudioOuvert = true)}>
+              + Importer un nouveau son
             </button>
+          {:else}
+            <div class="choix-ajout">
+              <label class="bouton-fichier-mini">
+                Depuis mon ordinateur
+                <input type="file" accept="audio/*" onchange={importerAudioLocalPourQuestion} />
+              </label>
+              <button type="button" onclick={() => (driveAudioOuvert = !driveAudioOuvert)}>
+                Depuis Google Drive
+              </button>
+              <button type="button" onclick={() => (importAudioOuvert = false)}>Fermer</button>
+            </div>
+            {#if driveAudioOuvert}
+              <ImporterDepuisDrive typeMime="audio" onimporter={importerAudioDrivePourQuestion} />
+            {/if}
           {/if}
         </div>
 
@@ -533,6 +717,10 @@
                 {#if question.bonneReponse}· bonne réponse : {question.bonneReponse}{/if}
                 {#if question.competence}· {question.competence}{/if}
                 {#if !question.notee}· non notée{/if}
+                {#if question.images?.length}
+                  · {question.images.length} image{question.images.length > 1 ? 's' : ''}
+                {/if}
+                {#if question.audio}· extrait audio{/if}
               </p>
             </div>
             <div class="actions-question">
@@ -699,29 +887,92 @@
     align-items: center;
     gap: 0.4rem !important;
   }
-  .bloc-image button {
-    padding: 0.4rem 0.75rem;
+  .etiquette {
+    font-size: 0.85rem;
+    color: var(--text);
+    font-weight: 500;
+    margin: 0 0 0.25rem;
+  }
+  .bloc-images,
+  .bloc-audio {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .diaporama {
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .diaporama li {
+    width: 8rem;
+    text-align: center;
+  }
+  .diaporama :global(.vignette) {
+    width: 8rem;
+    height: 6rem;
+    object-fit: cover;
+    border-radius: 0.4rem;
+    display: block;
+  }
+  .attribution {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin: 0.3rem 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .actions-vignette {
+    display: flex;
+    justify-content: center;
+    gap: 0.2rem;
+  }
+  .actions-vignette button,
+  .choix-ajout button,
+  .bouton-fichier-mini,
+  .bloc-audio > button {
+    position: relative;
+    padding: 0.3rem 0.6rem;
     border-radius: 0.4rem;
     border: 1px solid var(--border);
     background: none;
     cursor: pointer;
-    font-size: 0.85rem;
-  }
-  .image-choisie {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-  }
-  .image-choisie img {
-    width: 4rem;
-    height: 4rem;
-    object-fit: cover;
-    border-radius: 0.4rem;
-  }
-  .attribution {
     font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-bottom: 0.4rem;
+  }
+  .actions-vignette button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  .choix-ajout {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .choix-ajout button,
+  .bouton-fichier-mini {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.8rem;
+  }
+  .bouton-fichier-mini input[type='file'] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .bloc-audio select {
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+  }
+  .bloc-audio > button {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.8rem;
   }
   .actions-formulaire {
     display: flex;

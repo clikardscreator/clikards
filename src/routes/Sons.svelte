@@ -1,6 +1,7 @@
 <script lang="ts">
   import PageProvisoire from '../components/PageProvisoire.svelte';
   import RechercheImages from '../components/RechercheImages.svelte';
+  import MediathequeSons from '../components/MediathequeSons.svelte';
 
   const onglets = [
     { id: 'sons', libelle: 'Sons' },
@@ -32,11 +33,7 @@
 
   <div class="contenu-onglet">
     {#if ongletActif === 'sons'}
-      <PageProvisoire
-        titre="Sons"
-        description="Import depuis un dossier Google Drive partagé par lien (lecture seule, sans connexion personnelle), mise en cache locale pour une écoute hors ligne en classe, éditeur de marqueurs sur la forme d'onde."
-        jalon="Jalon 4 — audio et Google Drive (mode lien public)"
-      />
+      <MediathequeSons />
     {:else if ongletActif === 'images'}
       <RechercheImages />
     {:else}
