@@ -1,4 +1,5 @@
 import { db, type Classe, type Niveau } from './database';
+import { signalerChangementDonnees } from './sauvegardeAuto';
 
 /** Année scolaire par défaut : bascule au 1er août. */
 export function anneeScolaireActuelle(reference = new Date()): string {
@@ -29,6 +30,7 @@ export async function creerClasse(donnees: {
     creeLe: Date.now(),
   };
   await db.classes.add(classe);
+  signalerChangementDonnees();
   return classe;
 }
 
@@ -37,6 +39,7 @@ export async function supprimerClasse(id: string): Promise<void> {
     await db.eleves.where('classeId').equals(id).delete();
     await db.classes.delete(id);
   });
+  signalerChangementDonnees();
 }
 
 export async function compterElevesParClasse(): Promise<Record<string, number>> {

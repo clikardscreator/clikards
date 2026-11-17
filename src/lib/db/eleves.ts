@@ -1,5 +1,6 @@
 import { db, NUMERO_CARTE_MAX, type Eleve } from './database';
 import { analyserListeEleves } from '../eleves/analyseListe';
+import { signalerChangementDonnees } from './sauvegardeAuto';
 
 export async function listerElevesParClasse(classeId: string): Promise<Eleve[]> {
   const eleves = await db.eleves.where('classeId').equals(classeId).toArray();
@@ -42,11 +43,13 @@ export async function ajouterEleve(donnees: {
     ordrePronote: elevesExistants.length,
   };
   await db.eleves.add(eleve);
+  signalerChangementDonnees();
   return eleve;
 }
 
 export async function supprimerEleve(id: string): Promise<void> {
   await db.eleves.delete(id);
+  signalerChangementDonnees();
 }
 
 export async function modifierNumeroCarte(id: string, numeroCarte: number): Promise<void> {
@@ -63,6 +66,7 @@ export async function modifierNumeroCarte(id: string, numeroCarte: number): Prom
   }
 
   await db.eleves.update(id, { numeroCarte });
+  signalerChangementDonnees();
 }
 
 export interface ResultatImport {
@@ -99,6 +103,7 @@ export async function importerElevesDepuisTexte(
 
   if (aCreer.length > 0) {
     await db.eleves.bulkAdd(aCreer);
+    signalerChangementDonnees();
   }
 
   return { importes: aCreer.length, ignores: lignes.length - aCreer.length };
