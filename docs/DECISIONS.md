@@ -58,3 +58,14 @@ Contexte : besoin d'illustrer une question avec une image, sans mettre en place 
 
 - **Openverse** (`api.openverse.org`) retenu : API REST publique, sans clé requise, qui n'indexe que des images sous licence Creative Commons ou domaine public — adapté à un usage pédagogique en évitant les problèmes de droits d'auteur (contrairement à une recherche d'images généraliste). Pas de guide de configuration nécessaire pour l'auteur.
 - Alternatives écartées pour l'instant : Pixabay et Google Custom Search Images nécessitent chacun la création d'une clé API par l'auteur (et un moteur de recherche personnalisé pour Google) — à reconsidérer seulement si la couverture ou la qualité des résultats Openverse s'avère insuffisante à l'usage.
+
+## Classes et élèves (jalon 2, premier volet)
+
+Contexte : première fonctionnalité du jalon 2, et première utilisation réelle du stockage persistant (IndexedDB via Dexie), comme prévu section 5.
+
+- **Dexie** : deux tables `classes` et `eleves`, identifiants UUID (`crypto.randomUUID()`), conformes au modèle de la section 5. Index composé `[classeId+numeroCarte]` pour les requêtes par classe.
+- Le contrôle d'unicité du numéro de carte (1 à 63) est fait **en lecture avant écriture**, côté application (pas de contrainte d'unicité Dexie native sur un sous-ensemble de colonnes) : une classe a bien plusieurs numéros 1 à 63, mais deux classes différentes peuvent réutiliser les mêmes numéros (« une même carte peut servir dans plusieurs classes », section 5) — donc l'unicité est **par classe**, jamais globale.
+- Import par collage (`src/lib/eleves/analyseListe.ts`, pur, sans dépendance à la base — facile à tester) : convention Pronote « NOM en MAJUSCULES, éventuellement sur plusieurs mots, puis Prénom ». Repli sur « premier mot = nom » si rien n'est détecté en majuscules (cas atypique). Les lignes vides sont ignorées. Une tabulation dans la ligne bascule sur un simple split CSV `NOM<tab>Prénom`.
+- Les numéros de carte sont attribués au **premier numéro libre dans l'ordre**, que ce soit à l'ajout manuel ou à l'import en masse — un ajout manuel antérieur n'est jamais réécrit par un import ultérieur.
+- Tests Dexie sous Vitest : nécessite le polyfill **`fake-indexeddb`** (`import 'fake-indexeddb/auto'` dans `src/tests/setup.ts`), jsdom ne fournissant pas IndexedDB. Chaque fichier de test vide les tables avant/après (`db.classes.clear()`, `db.eleves.clear()`) pour rester indépendant des autres tests.
+- Pas encore fait (volontairement, hors périmètre de ce premier volet) : import CSV par fichier, réordonnancement par glisser-déposer des numéros de carte, export Pronote (viendra avec les résultats, jalon 5).

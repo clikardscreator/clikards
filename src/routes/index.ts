@@ -1,6 +1,7 @@
 import type { RouteDefinition } from 'svelte-spa-router';
 import Accueil from './Accueil.svelte';
 import Classes from './Classes.svelte';
+import ClasseDetail from './ClasseDetail.svelte';
 import Banques from './Banques.svelte';
 import Sons from './Sons.svelte';
 import Projection from './Projection.svelte';
@@ -13,6 +14,7 @@ import Introuvable from './Introuvable.svelte';
 export const routes: RouteDefinition = {
   '/': Accueil,
   '/classes': Classes,
+  '/classes/:id': ClasseDetail,
   '/banques': Banques,
   '/sons': Sons,
   '/session/:id': Projection,
