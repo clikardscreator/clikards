@@ -100,4 +100,11 @@ Contexte : avec les classes déjà en place, il manquait la partie « questions 
 - **Export/import CSV** (`src/lib/db/banqueCsv.ts`) : volontairement limité aux questions de type QCM (2 à 4 choix), conformément à la demande « simple, éditable dans un tableur » — un Vrai/Faux ou un sondage n'a pas vraiment de sens dans ce format tabulaire simplifié. Séparateur `;` (cohérent avec l'export Pronote prévu section 10), échappement RFC4180 minimal (guillemets doublés) implémenté à la main plutôt que d'ajouter une dépendance pour ce besoin restreint. L'import CSV **ajoute** des questions à la banque ouverte (pas de nouvelle banque, contrairement au JSON), car un CSV ne porte aucune métadonnée de banque.
 - **Duplication d'une banque** (`dupliquerBanque`) : copie la banque et toutes ses questions avec de nouveaux identifiants, dans une transaction Dexie.
 - `exemples/banque-timbres-6e.json` : fichier de démonstration (5 questions : 2 QCM, 2 Vrai/Faux, 1 sondage), conforme au format d'export ci-dessus. Un test (`exemples.test.ts`) vérifie qu'il reste importable si le schéma évolue, pour ne pas laisser l'exemple se périmer silencieusement.
-- Pas encore fait (volontairement, hors périmètre de ce volet) : réordonnancement par glisser-déposer, lien avec un son ou une vidéo (jalon 4, la médiathèque correspondante n'existe pas encore pour ces deux formats), export CSV incluant Vrai/Faux et sondages.
+- Pas encore fait (volontairement, hors périmètre de ce volet) : lien avec un son ou une vidéo (jalon 4, la médiathèque correspondante n'existe pas encore pour ces deux formats), export CSV incluant Vrai/Faux et sondages.
+
+## Banques de questions : réordonnancement par glisser-déposer + édition des métadonnées
+
+Contexte : deux manques identifiés juste après le premier volet — le glisser-déposer explicitement demandé section 8, et l'impossibilité de corriger le titre/niveau/tags d'une banque après sa création.
+
+- `reordonnerQuestions(idsEnOrdre)` (`src/lib/db/questions.ts`) complète `deplacerQuestion` plutôt que de le remplacer : glisser-déposer (HTML5 natif, `draggable`/`ondragstart`/`ondragover`/`ondrop`, aucune bibliothèque) via une poignée dédiée (⠿), et boutons monter/descendre conservés car le glisser-déposer natif n'est pas accessible au clavier.
+- Édition de banque directement sur `/banques/:id` (titre, niveau, tags) via `modifierBanque`, déjà présent dans la bibliothèque mais jusque-là non relié à l'interface.

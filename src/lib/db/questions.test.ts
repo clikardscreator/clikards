@@ -6,6 +6,7 @@ import {
   deplacerQuestion,
   listerQuestionsParBanque,
   modifierQuestion,
+  reordonnerQuestions,
   supprimerQuestion,
 } from './questions';
 
@@ -120,6 +121,20 @@ describe('deplacerQuestion', () => {
     const inchange = await listerQuestionsParBanque(banque.id);
     expect(inchange.map((q) => q.enonce)).toEqual(['Seconde', 'Première']);
     expect(premiere.ordre).toBe(0);
+  });
+});
+
+describe('reordonnerQuestions', () => {
+  it('applique un ordre libre (glisser-déposer)', async () => {
+    const banque = await creerBanqueTest();
+    const a = await creerQuestion(banque.id, { enonce: 'A', type: 'sondage', choix: [] });
+    const b = await creerQuestion(banque.id, { enonce: 'B', type: 'sondage', choix: [] });
+    const c = await creerQuestion(banque.id, { enonce: 'C', type: 'sondage', choix: [] });
+
+    await reordonnerQuestions([c.id, a.id, b.id]);
+
+    const apres = await listerQuestionsParBanque(banque.id);
+    expect(apres.map((q) => q.enonce)).toEqual(['C', 'A', 'B']);
   });
 });
 

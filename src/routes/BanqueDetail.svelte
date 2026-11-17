@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { link } from 'svelte-spa-router';
-  import { obtenirBanque } from '../lib/db/banques';
+  import { modifierBanque, obtenirBanque } from '../lib/db/banques';
   import {
     creerQuestion,
     deplacerQuestion,
     modifierQuestion,
     listerQuestionsParBanque,
+    reordonnerQuestions,
     supprimerQuestion,
     type DonneesQuestion,
   } from '../lib/db/questions';
@@ -17,13 +18,15 @@
     nomFichierBanque,
   } from '../lib/db/banqueExport';
   import { questionsVersCsv, csvVersQuestions, nomFichierCsv } from '../lib/db/banqueCsv';
-  import type {
-    Banque,
-    Choix,
-    ImageQuestion,
-    Lettre,
-    Question,
-    TypeQuestion,
+  import {
+    NIVEAUX,
+    type Banque,
+    type Choix,
+    type ImageQuestion,
+    type Lettre,
+    type Niveau,
+    type Question,
+    type TypeQuestion,
   } from '../lib/db/database';
   import RechercheImages from '../components/RechercheImages.svelte';
   import type { ImageTrouvee } from '../lib/images/openverse';
@@ -52,6 +55,13 @@
   let entreeImportCsv: HTMLInputElement | undefined = $state();
   let messageImport = $state('');
   let erreurImport = $state('');
+
+  let editionBanqueOuverte = $state(false);
+  let titreBanque = $state('');
+  let niveauBanque = $state<Niveau | ''>('');
+  let tagsBanque = $state('');
+
+  let indexDrague = $state<number | null>(null);
 
   const LETTRES: Lettre[] = ['A', 'B', 'C', 'D'];
 
@@ -181,6 +191,46 @@
     await recharger();
   }
 
+  function debuterDeplacement(index: number) {
+    indexDrague = index;
+  }
+
+  async function deposerSur(indexCible: number) {
+    if (indexDrague === null || indexDrague === indexCible) {
+      indexDrague = null;
+      return;
+    }
+    const nouvelOrdre = [...questions];
+    const [deplacee] = nouvelOrdre.splice(indexDrague, 1);
+    nouvelOrdre.splice(indexCible, 0, deplacee);
+    questions = nouvelOrdre;
+    indexDrague = null;
+    await reordonnerQuestions(nouvelOrdre.map((q) => q.id));
+  }
+
+  function ouvrirEditionBanque() {
+    if (!banque) return;
+    titreBanque = banque.titre;
+    niveauBanque = banque.niveau ?? '';
+    tagsBanque = banque.tags.join(', ');
+    editionBanqueOuverte = true;
+  }
+
+  async function validerEditionBanque(evenement: SubmitEvent) {
+    evenement.preventDefault();
+    if (!titreBanque.trim()) return;
+    await modifierBanque(params.id, {
+      titre: titreBanque,
+      niveau: niveauBanque || undefined,
+      tags: tagsBanque
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0),
+    });
+    editionBanqueOuverte = false;
+    await recharger();
+  }
+
   async function exporterJson() {
     const exportBanque = await exporterBanque(params.id);
     const blob = new Blob([JSON.stringify(exportBanque, null, 2)], { type: 'application/json' });
@@ -257,13 +307,43 @@
     <p class="erreur">Banque introuvable.</p>
   {:else if banque}
     <div class="entete">
-      <div>
-        <h1>{banque.titre}</h1>
-        <p class="sous-titre">
-          {#if banque.niveau}{banque.niveau} ·
-          {/if}{questions.length} question{questions.length > 1 ? 's' : ''}
-        </p>
-      </div>
+      {#if editionBanqueOuverte}
+        <form class="formulaire-banque" onsubmit={validerEditionBanque}>
+          <label>
+            Titre
+            <input type="text" bind:value={titreBanque} required />
+          </label>
+          <label>
+            Niveau
+            <select bind:value={niveauBanque}>
+              <option value="">—</option>
+              {#each NIVEAUX as unNiveau (unNiveau)}
+                <option value={unNiveau}>{unNiveau}</option>
+              {/each}
+            </select>
+          </label>
+          <label>
+            Tags (séparés par des virgules)
+            <input type="text" bind:value={tagsBanque} placeholder="timbre, 6e, démonstration" />
+          </label>
+          <div class="actions-formulaire">
+            <button type="submit" class="bouton-principal">Enregistrer</button>
+            <button type="button" onclick={() => (editionBanqueOuverte = false)}>Annuler</button>
+          </div>
+        </form>
+      {:else}
+        <div>
+          <h1>{banque.titre}</h1>
+          <p class="sous-titre">
+            {#if banque.niveau}{banque.niveau} ·
+            {/if}{questions.length} question{questions.length > 1 ? 's' : ''}
+            {#if banque.tags.length > 0}· {banque.tags.join(', ')}{/if}
+          </p>
+          <button type="button" class="lien-modifier" onclick={ouvrirEditionBanque}>
+            Modifier le titre, le niveau ou les tags
+          </button>
+        </div>
+      {/if}
       <div class="actions-entete">
         <button type="button" onclick={exporterJson}>Exporter (JSON)</button>
         <button type="button" onclick={exporterCsv}>Exporter (CSV)</button>
@@ -405,9 +485,25 @@
     {#if questions.length === 0}
       <p class="aide">Aucune question pour l'instant.</p>
     {:else}
+      <p class="aide">Glissez une question par sa poignée (⠿) pour la réordonner.</p>
       <ul class="liste-questions">
         {#each questions as question, index (question.id)}
-          <li class="ligne-question">
+          <li
+            class="ligne-question"
+            class:en-glissement={indexDrague === index}
+            ondragover={(e) => e.preventDefault()}
+            ondrop={() => deposerSur(index)}
+          >
+            <span
+              class="poignee"
+              draggable="true"
+              ondragstart={() => debuterDeplacement(index)}
+              aria-label="Glisser pour réordonner"
+              role="button"
+              tabindex="0"
+            >
+              ⠿
+            </span>
             <div class="deplacer">
               <button
                 type="button"
@@ -476,6 +572,41 @@
   }
   .sous-titre {
     color: var(--text-muted);
+  }
+  .lien-modifier {
+    margin-top: 0.4rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.8rem;
+    text-decoration: underline;
+  }
+  .formulaire-banque {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: end;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: #f8fafc;
+    flex: 1 1 100%;
+  }
+  .formulaire-banque label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+  .formulaire-banque input,
+  .formulaire-banque select {
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
   }
   .actions-entete {
     display: flex;
@@ -621,6 +752,15 @@
     border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 0.6rem 0.75rem;
+  }
+  .ligne-question.en-glissement {
+    opacity: 0.4;
+  }
+  .poignee {
+    cursor: grab;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    user-select: none;
   }
   .deplacer {
     display: flex;

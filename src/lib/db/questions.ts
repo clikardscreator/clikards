@@ -79,3 +79,11 @@ export async function deplacerQuestion(id: string, direction: 'haut' | 'bas'): P
   });
   signalerChangementDonnees();
 }
+
+/** Réordonnancement libre (glisser-déposer) : applique l'ordre donné par la liste d'identifiants. */
+export async function reordonnerQuestions(idsEnOrdre: string[]): Promise<void> {
+  await db.transaction('rw', db.questions, async () => {
+    await Promise.all(idsEnOrdre.map((id, index) => db.questions.update(id, { ordre: index })));
+  });
+  signalerChangementDonnees();
+}
