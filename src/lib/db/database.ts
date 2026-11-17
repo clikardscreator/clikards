@@ -79,7 +79,8 @@ export interface Question {
   competence?: string;
   /** Diaporama : zéro, une ou plusieurs images affichées avec la question. */
   images?: ImageQuestion[];
-  audio?: AudioQuestion;
+  /** Zéro, un ou plusieurs extraits audio (chacun référence un son de la médiathèque). */
+  audios?: AudioQuestion[];
   /** 1 par défaut. */
   coefficient: number;
   /** false pour un sondage ou une question d'échauffement. */

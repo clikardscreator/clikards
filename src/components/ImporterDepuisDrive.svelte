@@ -53,8 +53,8 @@
       const blob = await telechargerFichierDrive(fichier.id);
       onimporter({ nom: fichier.nom, mime: fichier.mimeType, blob, idDrive: fichier.id });
       idsImportes.add(fichier.id);
-    } catch {
-      erreur = `Échec du téléchargement de « ${fichier.nom} ».`;
+    } catch (e) {
+      erreur = `Échec du téléchargement de « ${fichier.nom} » : ${e instanceof Error ? e.message : 'erreur inconnue.'}`;
     } finally {
       idsEnCours.delete(fichier.id);
     }

@@ -12,13 +12,13 @@ export interface ExportBanque {
 }
 
 /**
- * Les images importées localement ou depuis Drive (`blob`) et le son associé
- * (`audio`, référence locale à la médiathèque) ne sont pas portables dans un
- * fichier JSON texte : ils sont retirés de l'export. Seules les images
- * distantes (`url`, ex. Openverse) survivent. Voir docs/DECISIONS.md.
+ * Les images importées localement ou depuis Drive (`blob`) et les extraits
+ * audio (`audios`, référence locale à la médiathèque) ne sont pas portables
+ * dans un fichier JSON texte : ils sont retirés de l'export. Seules les
+ * images distantes (`url`, ex. Openverse) survivent. Voir docs/DECISIONS.md.
  */
 function questionExportable(question: Question): Omit<Question, 'id' | 'banqueId'> {
-  const { id: _id, banqueId: _idBanque, images, audio: _audio, ...reste } = question;
+  const { id: _id, banqueId: _idBanque, images, audios: _audios, ...reste } = question;
   const imagesExportables = images?.filter((image) => Boolean(image.url));
   return {
     ...reste,

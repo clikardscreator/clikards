@@ -34,6 +34,8 @@
   import RechercheImages from '../components/RechercheImages.svelte';
   import ImageApercu from '../components/ImageApercu.svelte';
   import ImporterDepuisDrive from '../components/ImporterDepuisDrive.svelte';
+  import ExtraitAudio from '../components/ExtraitAudio.svelte';
+  import PrevisualisationProjection from '../components/PrevisualisationProjection.svelte';
   import type { ImageTrouvee } from '../lib/images/openverse';
   import { texteAttribution } from '../lib/images/openverse';
 
@@ -58,12 +60,12 @@
   let images = $state<ImageQuestion[]>([]);
   let modeAjoutImage = $state<'recherche' | 'drive' | null>(null);
 
-  let sonIdChoisi = $state('');
-  let audioDebut = $state<number | undefined>(undefined);
-  let audioFin = $state<number | undefined>(undefined);
-  let audioLectureAuto = $state(false);
-  let importAudioOuvert = $state(false);
+  let audios = $state<AudioQuestion[]>([]);
+  let ajoutAudioOuvert = $state(false);
+  let sonPourAjout = $state('');
   let driveAudioOuvert = $state(false);
+
+  let questionEnApercu = $state<Question | null>(null);
 
   let entreeImportJson: HTMLInputElement | undefined = $state();
   let entreeImportCsv: HTMLInputElement | undefined = $state();
@@ -106,11 +108,9 @@
     erreurFormulaire = '';
     images = [];
     modeAjoutImage = null;
-    sonIdChoisi = '';
-    audioDebut = undefined;
-    audioFin = undefined;
-    audioLectureAuto = false;
-    importAudioOuvert = false;
+    audios = [];
+    ajoutAudioOuvert = false;
+    sonPourAjout = '';
     driveAudioOuvert = false;
   }
 
@@ -135,11 +135,9 @@
     erreurFormulaire = '';
     images = question.images ? [...question.images] : [];
     modeAjoutImage = null;
-    sonIdChoisi = question.audio?.sonId ?? '';
-    audioDebut = question.audio?.debut;
-    audioFin = question.audio?.fin;
-    audioLectureAuto = question.audio?.lectureAuto ?? false;
-    importAudioOuvert = false;
+    audios = question.audios ? [...question.audios] : [];
+    ajoutAudioOuvert = false;
+    sonPourAjout = '';
     driveAudioOuvert = false;
     formulaireOuvert = true;
   }
@@ -192,14 +190,34 @@
     images = copie;
   }
 
+  function ajouterExtraitAudio() {
+    if (!sonPourAjout) return;
+    audios = [...audios, { sonId: sonPourAjout, lectureAuto: false }];
+    sonPourAjout = '';
+    ajoutAudioOuvert = false;
+    driveAudioOuvert = false;
+  }
+
+  function retirerAudio(index: number) {
+    audios = audios.filter((_, i) => i !== index);
+  }
+
+  function majPlageAudio(index: number, plage: { debut: number; fin: number }) {
+    audios = audios.map((a, i) => (i === index ? { ...a, debut: plage.debut, fin: plage.fin } : a));
+  }
+
   async function importerAudioLocalPourQuestion(evenement: Event) {
-    const fichier = (evenement.currentTarget as HTMLInputElement).files?.[0];
+    // Capturer l'input avant le premier await : le navigateur remet
+    // `currentTarget` à null une fois l'événement terminé, donc le relire
+    // après un await plante avec « Cannot set properties of null ».
+    const entree = evenement.currentTarget as HTMLInputElement;
+    const fichier = entree.files?.[0];
     if (!fichier) return;
     const son = await importerSonLocal(fichier);
     sonsDisponibles = await listerSons();
-    sonIdChoisi = son.id;
-    importAudioOuvert = false;
-    (evenement.currentTarget as HTMLInputElement).value = '';
+    audios = [...audios, { sonId: son.id, lectureAuto: false }];
+    ajoutAudioOuvert = false;
+    entree.value = '';
   }
 
   async function importerAudioDrivePourQuestion(fichier: {
@@ -210,8 +228,8 @@
   }) {
     const son = await importerSonDepuisDrive(fichier);
     sonsDisponibles = await listerSons();
-    sonIdChoisi = son.id;
-    importAudioOuvert = false;
+    audios = [...audios, { sonId: son.id, lectureAuto: false }];
+    ajoutAudioOuvert = false;
     driveAudioOuvert = false;
   }
 
@@ -236,15 +254,6 @@
       return;
     }
 
-    const audio: AudioQuestion | undefined = sonIdChoisi
-      ? {
-          sonId: sonIdChoisi,
-          debut: audioDebut || undefined,
-          fin: audioFin || undefined,
-          lectureAuto: audioLectureAuto,
-        }
-      : undefined;
-
     const donnees: DonneesQuestion = {
       enonce,
       type,
@@ -255,7 +264,7 @@
       // proxys réactifs que le clonage structuré d'IndexedDB ne sait pas
       // sérialiser tels quels (DataCloneError à l'écriture Dexie).
       images: $state.snapshot(images),
-      audio,
+      audios: $state.snapshot(audios),
       coefficient,
       notee,
     };
@@ -591,45 +600,59 @@
         </div>
 
         <div class="bloc-audio">
-          <p class="etiquette">Son associé (extrait audio)</p>
+          <p class="etiquette">Extraits audio</p>
 
-          {#if sonsDisponibles.length > 0}
-            <label>
-              Son
-              <select bind:value={sonIdChoisi}>
-                <option value="">— Aucun —</option>
-                {#each sonsDisponibles as son (son.id)}
-                  <option value={son.id}>{son.titre}</option>
-                {/each}
-              </select>
-            </label>
-          {:else}
-            <p class="aide">Aucun son dans la médiathèque pour l'instant.</p>
+          {#if audios.length > 0}
+            <ul class="liste-extraits">
+              {#each audios as audioQuestion, index (index)}
+                {@const son = sonsDisponibles.find((s) => s.id === audioQuestion.sonId)}
+                <li class="extrait-ligne">
+                  <div class="entete-extrait">
+                    <span class="titre-son">{son?.titre ?? 'Son introuvable'}</span>
+                    <label class="case-notee">
+                      <input
+                        type="checkbox"
+                        checked={audioQuestion.lectureAuto}
+                        onchange={(e) =>
+                          (audios = audios.map((a, i) =>
+                            i === index ? { ...a, lectureAuto: e.currentTarget.checked } : a,
+                          ))}
+                      />
+                      Lecture auto
+                    </label>
+                    <button type="button" onclick={() => retirerAudio(index)}>Retirer</button>
+                  </div>
+                  {#if son}
+                    <ExtraitAudio
+                      blob={son.blob}
+                      debut={audioQuestion.debut ?? 0}
+                      fin={audioQuestion.fin}
+                      modifiable
+                      onchange={(plage) => majPlageAudio(index, plage)}
+                    />
+                  {/if}
+                </li>
+              {/each}
+            </ul>
           {/if}
 
-          {#if sonIdChoisi}
-            <div class="ligne-champs">
-              <label>
-                Début (s)
-                <input type="number" min="0" step="0.1" bind:value={audioDebut} />
-              </label>
-              <label>
-                Fin (s)
-                <input type="number" min="0" step="0.1" bind:value={audioFin} />
-              </label>
-              <label class="case-notee">
-                <input type="checkbox" bind:checked={audioLectureAuto} />
-                Lecture automatique
-              </label>
-            </div>
-          {/if}
-
-          {#if !importAudioOuvert}
-            <button type="button" onclick={() => (importAudioOuvert = true)}>
-              + Importer un nouveau son
+          {#if !ajoutAudioOuvert}
+            <button type="button" onclick={() => (ajoutAudioOuvert = true)}>
+              + Ajouter un extrait audio
             </button>
           {:else}
             <div class="choix-ajout">
+              {#if sonsDisponibles.length > 0}
+                <select bind:value={sonPourAjout}>
+                  <option value="">— Choisir un son existant —</option>
+                  {#each sonsDisponibles as son (son.id)}
+                    <option value={son.id}>{son.titre}</option>
+                  {/each}
+                </select>
+                <button type="button" disabled={!sonPourAjout} onclick={ajouterExtraitAudio}>
+                  Ajouter
+                </button>
+              {/if}
               <label class="bouton-fichier-mini">
                 Depuis mon ordinateur
                 <input type="file" accept="audio/*" onchange={importerAudioLocalPourQuestion} />
@@ -637,7 +660,15 @@
               <button type="button" onclick={() => (driveAudioOuvert = !driveAudioOuvert)}>
                 Depuis Google Drive
               </button>
-              <button type="button" onclick={() => (importAudioOuvert = false)}>Fermer</button>
+              <button
+                type="button"
+                onclick={() => {
+                  ajoutAudioOuvert = false;
+                  driveAudioOuvert = false;
+                }}
+              >
+                Fermer
+              </button>
             </div>
             {#if driveAudioOuvert}
               <ImporterDepuisDrive typeMime="audio" onimporter={importerAudioDrivePourQuestion} />
@@ -720,10 +751,13 @@
                 {#if question.images?.length}
                   · {question.images.length} image{question.images.length > 1 ? 's' : ''}
                 {/if}
-                {#if question.audio}· extrait audio{/if}
+                {#if question.audios?.length}
+                  · {question.audios.length} extrait{question.audios.length > 1 ? 's' : ''} audio
+                {/if}
               </p>
             </div>
             <div class="actions-question">
+              <button type="button" onclick={() => (questionEnApercu = question)}>Aperçu</button>
               <button type="button" onclick={() => ouvrirEdition(question)}>Modifier</button>
               <button type="button" class="bouton-supprimer" onclick={() => supprimer(question)}>
                 Supprimer
@@ -735,6 +769,14 @@
     {/if}
   {/if}
 </section>
+
+{#if questionEnApercu}
+  <PrevisualisationProjection
+    question={questionEnApercu}
+    sons={sonsDisponibles}
+    onfermer={() => (questionEnApercu = null)}
+  />
+{/if}
 
 <style>
   .detail-banque {
@@ -973,6 +1015,41 @@
     margin-top: 0.5rem;
     font-size: 0.85rem;
     padding: 0.45rem 0.8rem;
+  }
+  .liste-extraits {
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .extrait-ligne {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: #fff;
+  }
+  .entete-extrait {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .entete-extrait .titre-son {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-h);
+    font-size: 0.9rem;
+  }
+  .entete-extrait button {
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #b91c1c;
   }
   .actions-formulaire {
     display: flex;

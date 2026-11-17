@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { extraireIdDossier } from './driveFichiers';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { extraireIdDossier, listerFichiersDossier, telechargerFichierDrive } from './driveFichiers';
 
 describe('extraireIdDossier', () => {
   it('extrait l’identifiant depuis un lien /drive/folders/', () => {
@@ -32,5 +32,96 @@ describe('extraireIdDossier', () => {
 
   it('ignore les espaces de début et de fin', () => {
     expect(extraireIdDossier('  1AbCdEfGhIjKlMn  ')).toBe('1AbCdEfGhIjKlMn');
+  });
+});
+
+describe('listerFichiersDossier', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it('refuse sans clé API configurée, avec un message explicite', async () => {
+    await expect(listerFichiersDossier('abc', 'audio')).rejects.toThrow('VITE_GOOGLE_API_KEY');
+  });
+
+  it("remonte le message d'erreur précis renvoyé par Google plutôt qu'un simple code HTTP", async () => {
+    vi.stubEnv('VITE_GOOGLE_API_KEY', 'cle-test');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({
+          error: {
+            message:
+              'Google Drive API has not been used in project 123456789 before or it is disabled.',
+          },
+        }),
+      }),
+    );
+
+    await expect(listerFichiersDossier('abc', 'audio')).rejects.toThrow(
+      'Google Drive API has not been used',
+    );
+  });
+
+  it('retombe sur un message générique utile quand la réponse ne contient pas de JSON exploitable', async () => {
+    vi.stubEnv('VITE_GOOGLE_API_KEY', 'cle-test');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => {
+          throw new Error('pas du JSON');
+        },
+      }),
+    );
+
+    await expect(listerFichiersDossier('abc', 'audio')).rejects.toThrow('docs/GOOGLE_SETUP.md');
+  });
+
+  it('transforme la réponse Drive en fichiers exploitables', async () => {
+    vi.stubEnv('VITE_GOOGLE_API_KEY', 'cle-test');
+    const fetchSimule = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        files: [{ id: 'f1', name: 'Entrée des cuivres.mp3', mimeType: 'audio/mpeg' }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchSimule);
+
+    const fichiers = await listerFichiersDossier('abc', 'audio');
+
+    expect(fichiers).toEqual([
+      { id: 'f1', nom: 'Entrée des cuivres.mp3', mimeType: 'audio/mpeg', modifiedTime: undefined },
+    ]);
+    const [urlAppelee] = fetchSimule.mock.calls[0] as [string];
+    expect(urlAppelee).toContain('audio%2F');
+    expect(urlAppelee).toContain('key=cle-test');
+  });
+});
+
+describe('telechargerFichierDrive', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("remonte le message d'erreur Google en cas d'échec", async () => {
+    vi.stubEnv('VITE_GOOGLE_API_KEY', 'cle-test');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { message: 'The caller does not have permission' } }),
+      }),
+    );
+
+    await expect(telechargerFichierDrive('f1')).rejects.toThrow(
+      'The caller does not have permission',
+    );
   });
 });

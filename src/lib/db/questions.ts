@@ -21,7 +21,7 @@ export interface DonneesQuestion {
   bonneReponse?: Lettre;
   competence?: string;
   images?: ImageQuestion[];
-  audio?: AudioQuestion;
+  audios?: AudioQuestion[];
   coefficient?: number;
   notee?: boolean;
 }
@@ -36,7 +36,7 @@ function normaliser(donnees: DonneesQuestion): Omit<Question, 'id' | 'banqueId' 
     bonneReponse: estSondage ? undefined : donnees.bonneReponse,
     competence: donnees.competence?.trim() || undefined,
     images: donnees.images && donnees.images.length > 0 ? donnees.images : undefined,
-    audio: donnees.audio,
+    audios: donnees.audios && donnees.audios.length > 0 ? donnees.audios : undefined,
     coefficient: donnees.coefficient ?? 1,
     notee: estSondage ? false : (donnees.notee ?? true),
   };

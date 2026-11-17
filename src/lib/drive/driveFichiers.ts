@@ -41,6 +41,32 @@ function cleApiRequise(): string {
   return cle;
 }
 
+/**
+ * Construit un message d'erreur à partir de la réponse Google : son JSON
+ * d'erreur (`error.message`) est bien plus précis qu'un simple code HTTP —
+ * un 403 peut aussi bien signifier « API Drive non activée pour ce projet »,
+ * « clé API invalide ou restreinte » ou « dossier non partagé publiquement »,
+ * trois causes très différentes à ne pas confondre.
+ */
+async function erreurDepuisReponse(reponse: Response, contexte: string): Promise<Error> {
+  try {
+    const corps = (await reponse.json()) as { error?: { message?: string } };
+    if (corps.error?.message) {
+      return new Error(`${contexte} : ${corps.error.message}`);
+    }
+  } catch {
+    // Corps non JSON ou vide : on retombe sur le code HTTP ci-dessous.
+  }
+  if (reponse.status === 404 || reponse.status === 403) {
+    return new Error(
+      `${contexte} (code ${reponse.status}). Vérifiez que l'API Google Drive est activée pour ` +
+        'votre projet Google Cloud, que la clé API autorise cette API, et que le dossier est ' +
+        'bien partagé « Tous les utilisateurs disposant du lien ». Voir docs/GOOGLE_SETUP.md.',
+    );
+  }
+  return new Error(`${contexte} (code ${reponse.status}).`);
+}
+
 /** Liste les fichiers audio ou image d'un dossier Drive partagé « avec le lien ». */
 export async function listerFichiersDossier(
   idDossier: string,
@@ -57,12 +83,7 @@ export async function listerFichiersDossier(
 
   const reponse = await fetch(`${URL_BASE}?${parametres.toString()}`);
   if (!reponse.ok) {
-    if (reponse.status === 404 || reponse.status === 403) {
-      throw new Error(
-        'Dossier introuvable ou non partagé publiquement. Partagez-le en « Tous les utilisateurs disposant du lien ».',
-      );
-    }
-    throw new Error(`Google Drive a répondu avec le code ${reponse.status}.`);
+    throw await erreurDepuisReponse(reponse, 'Impossible de lire ce dossier Google Drive');
   }
 
   const donnees = (await reponse.json()) as {
@@ -80,7 +101,7 @@ export async function telechargerFichierDrive(idFichier: string): Promise<Blob> 
   const cleApi = cleApiRequise();
   const reponse = await fetch(`${URL_BASE}/${idFichier}?alt=media&key=${cleApi}`);
   if (!reponse.ok) {
-    throw new Error(`Téléchargement impossible (code ${reponse.status}).`);
+    throw await erreurDepuisReponse(reponse, 'Téléchargement impossible');
   }
   return reponse.blob();
 }

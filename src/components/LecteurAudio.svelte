@@ -4,6 +4,10 @@
   let url = $state('');
 
   $effect(() => {
+    if (!(blob instanceof Blob)) {
+      url = '';
+      return;
+    }
     const objectUrl = URL.createObjectURL(blob);
     url = objectUrl;
     return () => URL.revokeObjectURL(objectUrl);

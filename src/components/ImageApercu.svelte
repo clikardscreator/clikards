@@ -14,7 +14,7 @@
       urlAffichage = image.url;
       return;
     }
-    if (image.blob) {
+    if (image.blob instanceof Blob) {
       const url = URL.createObjectURL(image.blob);
       urlAffichage = url;
       return () => URL.revokeObjectURL(url);
