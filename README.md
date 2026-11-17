@@ -1,47 +1,62 @@
-# Svelte + TS + Vite
+# Clikards
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+Application web de sondage en classe sans appareil élève, sur le principe de Plickers : chaque
+élève tient une carte-marqueur papier pour répondre A, B, C ou D, l'enseignant scanne la classe
+avec son smartphone, les réponses s'affichent en direct sur le vidéoprojecteur.
 
-## Recommended IDE Setup
+Par rapport à Plickers, Clikards ajoute :
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+- des **questions sonores** (reconnaissance d'instrument, de timbre, de style…) et des **extraits
+  vidéo YouTube** ;
+- l'**import de banques de sons** depuis Google Drive ;
+- l'**import/export des banques de questions** (JSON, CSV) pour les partager entre collègues ;
+- un **export des résultats compatible Pronote** ;
+- une **connexion avec un compte Google personnel** (facultative) pour retrouver ses banques, ses
+  classes et ses réglages sur plusieurs appareils — l'application reste utilisable sans compte,
+  entièrement en local.
 
-## Need an official Svelte framework?
+Projet **open source**, 100 % statique, déployé gratuitement sur GitHub Pages. Aucune donnée
+nominative d'élève ne quitte l'appareil de l'enseignant (stockage local, chiffré en cas de
+synchronisation avec un compte Google).
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+## Démarrage rapide
 
-## Technical considerations
-
-**Why use this over SvelteKit?**
-
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
-
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
-
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
-
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
-
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
-
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store';
-export default writable(0);
+```bash
+npm install
+npm run dev
 ```
+
+Ouvre <http://localhost:5173/clikards/>.
+
+Autres commandes utiles :
+
+```bash
+npm run build     # build de production (dist/)
+npm run preview   # aperçu du build de production
+npm test          # tests unitaires (Vitest)
+npm run check     # vérification des types (svelte-check + tsc)
+npm run lint       # ESLint
+npm run format     # Prettier (écrit les corrections)
+```
+
+## Connexion avec un compte Google (facultatif)
+
+Le bouton « Se connecter avec Google » (page `/compte`) nécessite un identifiant client OAuth
+propre à chaque déploiement. Guide pas à pas : [`docs/GOOGLE_SETUP.md`](docs/GOOGLE_SETUP.md).
+Sans configuration, l'application reste pleinement utilisable en mode local (voir la page
+`/reglages` pour la sauvegarde manuelle ou automatique des données).
+
+## Documentation
+
+- [`CLAUDE.md`](CLAUDE.md) — cahier des charges complet du projet.
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) — journal des décisions techniques.
+- [`docs/GOOGLE_SETUP.md`](docs/GOOGLE_SETUP.md) — configuration de la connexion Google.
+
+## Stack technique
+
+Vite + TypeScript + Svelte 5, `svelte-spa-router` (routage par hash), Dexie (IndexedDB), Vitest +
+Testing Library, ESLint + Prettier, PWA (`vite-plugin-pwa`).
+
+## Licence
+
+Voir [`LICENSE`](LICENSE).
