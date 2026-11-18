@@ -119,7 +119,9 @@ Il réutilise l'**ID client OAuth** déjà créé à l'étape 3 — aucun nouvel
 - La fenêtre de consentement Google est une **fenêtre popup** : certains navigateurs ou extensions
   la bloquent si le clic qui la déclenche n'est pas traité comme un geste utilisateur direct.
   Autorisez les popups pour `localhost:5173` (et plus tard pour votre domaine GitHub Pages) si
-  rien ne s'ouvre au clic.
+  rien ne s'ouvre au clic. Depuis la version actuelle, si la fenêtre ne répond pas dans les 15
+  secondes (signe qu'elle a été bloquée silencieusement), un message explicite apparaît au lieu de
+  rester bloqué sur « Ouverture… » indéfiniment.
 
 ## Dépannage
 

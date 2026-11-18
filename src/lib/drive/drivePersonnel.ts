@@ -62,15 +62,33 @@ function clientIdRequis(): string {
  * sélecteur). Le jeton n'est jamais stocké : il reste en mémoire pour la
  * durée de l'import en cours (CLAUDE.md section 7 bis).
  */
+/** Si Google ne répond pas dans ce délai, la fenêtre a probablement été bloquée par le navigateur. */
+const DELAI_MAX_REPONSE_MS = 15000;
+
 export async function demanderJetonDrive(): Promise<string> {
   const clientId = clientIdRequis();
   await chargerGoogleIdentityServices();
 
   return new Promise((resolve, reject) => {
+    let reglee = false;
+    const minuteur = setTimeout(() => {
+      if (!reglee) {
+        reglee = true;
+        reject(
+          new Error(
+            "La fenêtre de connexion Google n'a pas répondu : elle a probablement été bloquée par le navigateur. Autorisez les popups pour ce site et réessayez.",
+          ),
+        );
+      }
+    }, DELAI_MAX_REPONSE_MS);
+
     const client = window.google!.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: PORTEE_DRIVE_FILE,
       callback: (reponse) => {
+        if (reglee) return;
+        reglee = true;
+        clearTimeout(minuteur);
         if (reponse.access_token) {
           resolve(reponse.access_token);
         } else {
