@@ -104,6 +104,23 @@ utilisateurs disposant du lien** (rôle Lecteur suffit). Un dossier partagé seu
 personnes nommées ne fonctionnera pas : l'API Drive avec une simple clé API ne voit que les
 ressources publiques par lien.
 
+## 6. Mode B : accéder directement à son Drive personnel
+
+Le bouton « Mon Drive personnel » (à côté de « Dossier Drive partagé par lien ») ouvre le
+sélecteur officiel Google Drive pour choisir un fichier sans avoir à le partager publiquement.
+Il réutilise l'**ID client OAuth** déjà créé à l'étape 3 — aucun nouvel identifiant à créer.
+
+- Portée demandée : `drive.file` (la moins intrusive — Clikards ne voit que les fichiers que vous
+  choisissez explicitement dans le sélecteur, jamais tout votre Drive).
+- Le jeton d'accès reste en mémoire le temps de l'import ; il n'est jamais enregistré.
+- Si le sélecteur refuse de s'ouvrir ou renvoie une erreur alors que la connexion fonctionne par
+  ailleurs, essayez d'activer explicitement **Google Picker API** dans **Bibliothèque** (même
+  écran qu'à l'étape 5.1) — certains projets Google Cloud l'exigent, d'autres non.
+- La fenêtre de consentement Google est une **fenêtre popup** : certains navigateurs ou extensions
+  la bloquent si le clic qui la déclenche n'est pas traité comme un geste utilisateur direct.
+  Autorisez les popups pour `localhost:5173` (et plus tard pour votre domaine GitHub Pages) si
+  rien ne s'ouvre au clic.
+
 ## Dépannage
 
 - **« Origine non autorisée »** dans la console du navigateur : vérifiez que l'origine exacte

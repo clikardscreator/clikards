@@ -16,7 +16,24 @@ interface ReponseIdentifiantGoogle {
   credential: string;
 }
 
-interface ServiceIdentiteGoogle {
+interface ReponseJetonOAuth {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface ClientJetonOAuth {
+  requestAccessToken(overrides?: { prompt?: string }): void;
+}
+
+/**
+ * Type partagé de `window.google` : regroupe Google Identity Services
+ * (connexion + jeton OAuth2 pour le Drive personnel) et l'espace de noms
+ * `picker` (chargé séparément par `apis.google.com/js/api.js`), pour que
+ * les deux fichiers qui en ont besoin (`google.ts`, `drivePersonnel.ts`)
+ * étendent la même interface plutôt que deux déclarations incompatibles.
+ */
+export interface ServiceIdentiteGoogle {
   accounts: {
     id: {
       initialize(options: {
@@ -36,12 +53,25 @@ interface ServiceIdentiteGoogle {
       ): void;
       disableAutoSelect(): void;
     };
+    oauth2: {
+      initTokenClient(config: {
+        client_id: string;
+        scope: string;
+        prompt?: string;
+        callback: (reponse: ReponseJetonOAuth) => void;
+      }): ClientJetonOAuth;
+    };
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  picker?: any;
 }
 
 declare global {
   interface Window {
     google?: ServiceIdentiteGoogle;
+    gapi?: {
+      load(api: string, callback: () => void): void;
+    };
   }
 }
 

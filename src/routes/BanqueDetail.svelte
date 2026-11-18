@@ -34,6 +34,7 @@
   import RechercheImages from '../components/RechercheImages.svelte';
   import ImageApercu from '../components/ImageApercu.svelte';
   import ImporterDepuisDrive from '../components/ImporterDepuisDrive.svelte';
+  import ImporterDepuisDrivePersonnel from '../components/ImporterDepuisDrivePersonnel.svelte';
   import ExtraitAudio from '../components/ExtraitAudio.svelte';
   import PrevisualisationProjection from '../components/PrevisualisationProjection.svelte';
   import type { ImageTrouvee } from '../lib/images/openverse';
@@ -58,12 +59,12 @@
   let erreurFormulaire = $state('');
 
   let images = $state<ImageQuestion[]>([]);
-  let modeAjoutImage = $state<'recherche' | 'drive' | null>(null);
+  let modeAjoutImage = $state<'recherche' | 'drive' | 'drive-personnel' | null>(null);
 
   let audios = $state<AudioQuestion[]>([]);
   let ajoutAudioOuvert = $state(false);
   let sonPourAjout = $state('');
-  let driveAudioOuvert = $state(false);
+  let driveAudioOuvert = $state<'lien' | 'personnel' | null>(null);
 
   let questionEnApercu = $state<Question | null>(null);
 
@@ -111,7 +112,7 @@
     audios = [];
     ajoutAudioOuvert = false;
     sonPourAjout = '';
-    driveAudioOuvert = false;
+    driveAudioOuvert = null;
   }
 
   function ouvrirCreation() {
@@ -138,7 +139,7 @@
     audios = question.audios ? [...question.audios] : [];
     ajoutAudioOuvert = false;
     sonPourAjout = '';
-    driveAudioOuvert = false;
+    driveAudioOuvert = null;
     formulaireOuvert = true;
   }
 
@@ -202,7 +203,7 @@
     audios = [...audios, { sonId: sonPourAjout, lectureAuto: false }];
     sonPourAjout = '';
     ajoutAudioOuvert = false;
-    driveAudioOuvert = false;
+    driveAudioOuvert = null;
   }
 
   function retirerAudio(index: number) {
@@ -238,7 +239,7 @@
     sonsDisponibles = await listerSons();
     audios = [...audios, { sonId: son.id, lectureAuto: false }];
     ajoutAudioOuvert = false;
-    driveAudioOuvert = false;
+    driveAudioOuvert = null;
   }
 
   async function validerFormulaire(evenement: SubmitEvent) {
@@ -591,6 +592,9 @@
           {:else if modeAjoutImage === 'drive'}
             <ImporterDepuisDrive typeMime="image" onimporter={ajouterImageDrive} />
             <button type="button" onclick={() => (modeAjoutImage = null)}>Fermer</button>
+          {:else if modeAjoutImage === 'drive-personnel'}
+            <ImporterDepuisDrivePersonnel typeMime="image" onimporter={ajouterImageDrive} />
+            <button type="button" onclick={() => (modeAjoutImage = null)}>Fermer</button>
           {:else}
             <div class="choix-ajout">
               <button type="button" onclick={() => (modeAjoutImage = 'recherche')}>
@@ -601,7 +605,10 @@
                 <input type="file" accept="image/*" multiple onchange={ajouterImagesLocales} />
               </label>
               <button type="button" onclick={() => (modeAjoutImage = 'drive')}>
-                Depuis Google Drive
+                Dossier Drive partagé par lien
+              </button>
+              <button type="button" onclick={() => (modeAjoutImage = 'drive-personnel')}>
+                Mon Drive personnel
               </button>
             </div>
           {/if}
@@ -665,21 +672,36 @@
                 Depuis mon ordinateur
                 <input type="file" accept="audio/*" onchange={importerAudioLocalPourQuestion} />
               </label>
-              <button type="button" onclick={() => (driveAudioOuvert = !driveAudioOuvert)}>
-                Depuis Google Drive
+              <button
+                type="button"
+                onclick={() => (driveAudioOuvert = driveAudioOuvert === 'lien' ? null : 'lien')}
+              >
+                Dossier Drive partagé par lien
+              </button>
+              <button
+                type="button"
+                onclick={() =>
+                  (driveAudioOuvert = driveAudioOuvert === 'personnel' ? null : 'personnel')}
+              >
+                Mon Drive personnel
               </button>
               <button
                 type="button"
                 onclick={() => {
                   ajoutAudioOuvert = false;
-                  driveAudioOuvert = false;
+                  driveAudioOuvert = null;
                 }}
               >
                 Fermer
               </button>
             </div>
-            {#if driveAudioOuvert}
+            {#if driveAudioOuvert === 'lien'}
               <ImporterDepuisDrive typeMime="audio" onimporter={importerAudioDrivePourQuestion} />
+            {:else if driveAudioOuvert === 'personnel'}
+              <ImporterDepuisDrivePersonnel
+                typeMime="audio"
+                onimporter={importerAudioDrivePourQuestion}
+              />
             {/if}
           {/if}
         </div>

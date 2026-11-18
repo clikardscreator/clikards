@@ -11,12 +11,13 @@
   } from '../lib/db/sons';
   import type { Son } from '../lib/db/database';
   import ImporterDepuisDrive from './ImporterDepuisDrive.svelte';
+  import ImporterDepuisDrivePersonnel from './ImporterDepuisDrivePersonnel.svelte';
   import LecteurAudio from './LecteurAudio.svelte';
 
   let sons = $state<Son[]>([]);
   let chargement = $state(true);
   let tailleCache = $state(0);
-  let driveOuvert = $state(false);
+  let driveOuvert = $state<'lien' | 'personnel' | null>(null);
   let entreeFichiers: HTMLInputElement | undefined = $state();
 
   async function recharger() {
@@ -79,14 +80,24 @@
         onchange={importerFichiers}
       />
     </label>
-    <button type="button" onclick={() => (driveOuvert = !driveOuvert)}>
-      {driveOuvert ? 'Fermer' : 'Importer depuis Google Drive'}
+    <button type="button" onclick={() => (driveOuvert = driveOuvert === 'lien' ? null : 'lien')}>
+      {driveOuvert === 'lien' ? 'Fermer' : 'Dossier Drive partagé par lien'}
+    </button>
+    <button
+      type="button"
+      onclick={() => (driveOuvert = driveOuvert === 'personnel' ? null : 'personnel')}
+    >
+      {driveOuvert === 'personnel' ? 'Fermer' : 'Mon Drive personnel'}
     </button>
   </div>
 
-  {#if driveOuvert}
+  {#if driveOuvert === 'lien'}
     <div class="bloc-drive">
       <ImporterDepuisDrive typeMime="audio" onimporter={importerDepuisDrive} />
+    </div>
+  {:else if driveOuvert === 'personnel'}
+    <div class="bloc-drive">
+      <ImporterDepuisDrivePersonnel typeMime="audio" onimporter={importerDepuisDrive} />
     </div>
   {/if}
 
