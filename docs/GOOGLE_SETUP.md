@@ -116,6 +116,12 @@ Il réutilise l'**ID client OAuth** déjà créé à l'étape 3 — aucun nouvel
 - Si le sélecteur refuse de s'ouvrir ou renvoie une erreur alors que la connexion fonctionne par
   ailleurs, essayez d'activer explicitement **Google Picker API** dans **Bibliothèque** (même
   écran qu'à l'étape 5.1) — certains projets Google Cloud l'exigent, d'autres non.
+- **« There was an error! The API developer key is invalid. »** (écran d'erreur Google, pas un
+  message de Clikards) : la connexion et le choix de compte ont fonctionné, mais `VITE_GOOGLE_API_KEY`
+  est restreinte (étape 5.2) à uniquement **Google Drive API**, alors que le sélecteur appelle cette
+  même clé pour **Google Picker API**. Retournez dans **Identifiants**, ouvrez la clé, et dans
+  **Restrictions relatives aux API**, cochez aussi **Google Picker API** dans la liste autorisée (en
+  plus de Google Drive API), puis enregistrez et patientez 1-2 minutes avant de réessayer.
 - La fenêtre de consentement Google est une **fenêtre popup** : certains navigateurs ou extensions
   la bloquent si le clic qui la déclenche n'est pas traité comme un geste utilisateur direct.
   Autorisez les popups pour `localhost:5173` (et plus tard pour votre domaine GitHub Pages) si
